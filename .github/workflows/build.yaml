@@ -12,28 +12,43 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Install Dependencies
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up ARMv5 toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-linux-gnueabi g++-arm-linux-gnueabi qemu-user-static debootstrap
+          sudo apt-get install -y clang gcc-arm-linux-gnueabi g++-arm-linux-gnueabi cmake libx11-dev
 
-      - name: Set Up Sysroot
+      - name: Set up CMake Toolchain File for ARMv5
         run: |
-          sudo debootstrap --arch=armel --foreign bullseye /path/to/sysroot http://deb.debian.org/debian/
-          sudo cp /usr/bin/qemu-arm-static /path/to/sysroot/usr/bin/
-          sudo chroot /path/to/sysroot /debootstrap/debootstrap --second-stage
-          sudo chroot /path/to/sysroot apt-get install -y libx11-dev
+          mkdir -p $HOME/armv5-toolchain
+          cat > $HOME/armv5-toolchain/toolchain-armv5.cmake <<EOF
+          # toolchain-armv5.cmake
+          SET(CMAKE_SYSTEM_NAME Linux)
+          SET(CMAKE_SYSTEM_PROCESSOR arm)
+
+          SET(CMAKE_C_COMPILER /usr/bin/arm-linux-gnueabi-gcc)
+          SET(CMAKE_CXX_COMPILER /usr/bin/arm-linux-gnueabi-g++)
+
+          SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv5te -mfloat-abi=soft -mfpu=vfp")
+          EOF
+
+      - name: Configure CMake for ARMv5
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=$HOME/armv5-toolchain/toolchain-armv5.cmake
 
       - name: Build with CMake
         run: |
-          mkdir build
           cd build
-          cmake -DCMAKE_TOOLCHAIN_FILE=/path/to/sysroot/toolchain-armv5.cmake ..
-          make
+          make VERBOSE=1
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: armv5-build
           path: build/
