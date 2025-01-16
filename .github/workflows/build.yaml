@@ -22,6 +22,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang gcc-arm-linux-gnueabi g++-arm-linux-gnueabi cmake
 
+      - name: Install Dependencies
+        run: |
+          sudo apt-get install -y libx11-dev
+
       - name: Set up CMake Toolchain File for ARMv5
         run: |
           mkdir -p $HOME/armv5-toolchain
